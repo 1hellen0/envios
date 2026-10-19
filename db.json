@@ -1,0 +1,70 @@
+{
+  "pedidos": [
+    {
+      "id": 1,
+      "cliente": "María Rodríguez",
+      "ip": "170.203.199.242",
+      "estado": "pendiente",
+      "items": [
+        {
+          "nombre": "Teclado Mecánico",
+          "precio": 30000,
+          "cantidad": 1
+        }
+      ],
+      "pesoKg": 1,
+      "subtotal": 30000,
+      "costoEnvio": null,
+      "total": null,
+      "motivoRechazo": null,
+      "codigoRechazo": null,
+      "ubicacionDetectada": null,
+      "ultimoError": null,
+      "procesadoEn": null
+    },
+    {
+      "id": 2,
+      "cliente": "Carlos Mora (Escazú)",
+      "ip": "181.194.50.12",
+      "estado": "pendiente",
+      "items": [
+        {
+          "nombre": "Monitor LED",
+          "precio": 30000,
+          "cantidad": 1
+        }
+      ],
+      "pesoKg": 4,
+      "subtotal": 30000,
+      "costoEnvio": null,
+      "total": null,
+      "motivoRechazo": null,
+      "codigoRechazo": null,
+      "ubicacionDetectada": null,
+      "ultimoError": null,
+      "procesadoEn": null
+    },
+    {
+      "id": 3,
+      "cliente": "Laura Solano (Heredia)",
+      "ip": "190.113.115.5",
+      "estado": "pendiente",
+      "items": [
+        {
+          "nombre": "Mouse Inalámbrico",
+          "precio": 15000,
+          "cantidad": 1
+        }
+      ],
+      "pesoKg": 1,
+      "subtotal": 15000,
+      "costoEnvio": null,
+      "total": null,
+      "motivoRechazo": null,
+      "codigoRechazo": null,
+      "ubicacionDetectada": null,
+      "ultimoError": null,
+      "procesadoEn": null
+    }
+  ]
+}

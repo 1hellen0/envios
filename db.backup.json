@@ -1,0 +1,50 @@
+{
+  "pedidos": [
+    {
+      "id": 1,
+      "cliente": "María Rodríguez",
+      "correo": "maria@example.com",
+      "estado": "pendiente",
+      "items": [
+        { "sku": "CAM-001", "nombre": "Camisa de algodón", "precio": 15000, "cantidad": 2, "pesoKg": 0.4 }
+      ]
+    },
+    {
+      "id": 2,
+      "cliente": "Carlos Jiménez",
+      "correo": "carlos@example.com",
+      "estado": "pendiente",
+      "items": [
+        { "sku": "CAM-001", "nombre": "Camisa de algodón", "precio": 15000, "cantidad": 2, "pesoKg": 0.4 },
+        { "sku": "ZAP-010", "nombre": "Zapatos deportivos", "precio": 38000, "cantidad": 1, "pesoKg": 1.2 }
+      ]
+    },
+    {
+      "id": 3,
+      "cliente": "Ana Solís",
+      "correo": "ana@example.com",
+      "estado": "pendiente",
+      "items": [
+        { "sku": "MAN-020", "nombre": "Mancuernas 4 kg", "precio": 9000, "cantidad": 3, "pesoKg": 4 }
+      ]
+    },
+    {
+      "id": 4,
+      "cliente": "Luis Mora",
+      "correo": "luis@example.com",
+      "estado": "pendiente",
+      "items": []
+    },
+    {
+      "id": 5,
+      "cliente": "Sofía Vargas",
+      "correo": "sofia@example.com",
+      "estado": "aprobado",
+      "items": [
+        { "sku": "CAM-001", "nombre": "Camisa de algodón", "precio": 15000, "cantidad": 1, "pesoKg": 0.4 }
+      ],
+      "costoEnvio": 2500,
+      "total": 17500
+    }
+  ]
+}
