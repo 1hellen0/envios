@@ -1,0 +1,285 @@
+{
+  "name": "Verificacion Cobertura Pedidos San Jose",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "node-schedule-trigger",
+      "name": "Schedule_Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://127.0.0.1:3000/pedidos?estado=pendiente",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "node-http-get-pendientes",
+      "name": "HTTP_Get_Pendientes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://ip-api.com/json/{{ $json.ip }}?fields=status,message,country,countryCode,region,regionName,city,lat,lon,query",
+        "options": {
+          "neverError": true,
+          "timeout": 5000
+        }
+      },
+      "id": "node-http-geo-ip",
+      "name": "HTTP_Geo_IP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        820,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "class Ubicacion {\n  constructor(datos = {}) {\n    this.status = datos.status || 'fail';\n    this.country = datos.country || '';\n    this.countryCode = datos.countryCode || '';\n    this.region = datos.region || '';\n    this.regionName = datos.regionName || '';\n    this.city = datos.city || '';\n    this.message = datos.message || '';\n    this.lat = datos.lat ?? null;\n    this.lon = datos.lon ?? null;\n    this.query = datos.query || '';\n  }\n\n  esExitosa() {\n    return this.status === 'success' && Boolean(this.countryCode);\n  }\n\n  descripcion() {\n    if (!this.esExitosa()) return `Ubicación no disponible (${this.message || 'error de geolocalización'})`;\n    return [this.city, this.regionName, this.country].filter(Boolean).join(', ');\n  }\n\n  resumen() {\n    return {\n      pais: this.country,\n      codigoPais: this.countryCode,\n      provincia: this.regionName,\n      ciudad: this.city\n    };\n  }\n}\n\nclass ZonaCobertura {\n  static normalizar(texto) {\n    if (!texto) return '';\n    return String(texto)\n      .toLowerCase()\n      .normalize('NFD')\n      .replace(/[\\u0300-\\u036f]/g, '')\n      .replace(/^(provincia de|canton de|distrito de)\\s+/i, '')\n      .trim();\n  }\n\n  static cubre(ubicacion, pedido) {\n    // 1. Validar restricción explícita por provincia o cantón en datos de pedido\n    const provForzada = this.normalizar(pedido.provincia);\n    if (provForzada && !provForzada.includes('san jose')) {\n      return false;\n    }\n    const cantonForzado = this.normalizar(pedido.canton);\n    const cantonesFuera = ['heredia', 'alajuela', 'cartago', 'puntarenas', 'guanacaste', 'limon'];\n    if (cantonForzado && cantonesFuera.some(c => cantonForzado.includes(c))) {\n      return false;\n    }\n\n    // 2. Validar que la IP haya resuelto exitosamente en Costa Rica\n    if (!ubicacion || !ubicacion.esExitosa()) return false;\n    if (ubicacion.countryCode !== 'CR') return false;\n\n    // 3. Validar que la región resuelta sea la provincia de San José\n    const regionCod = (ubicacion.region || '').toUpperCase();\n    const regionNom = this.normalizar(ubicacion.regionName);\n    const ciudad = this.normalizar(ubicacion.city);\n\n    return (regionCod === 'SJ' || regionNom.includes('san jose') || ciudad.includes('san jose'));\n  }\n\n  static esCantonCentral(ubicacion, pedido) {\n    const ciudad = this.normalizar(ubicacion.city);\n    const canton = this.normalizar(pedido.canton);\n    return ciudad === 'san jose' || ciudad.includes('central') || canton === 'san jose' || canton.includes('central');\n  }\n}\n\nclass CalculadorEnvio {\n  static TARIFA_CENTRAL = 2500;\n  static TARIFA_RESTO = 3500;\n  static UMBRAL_ENVIO_GRATIS = 50000;\n  static LIMITE_PESO_BASE_KG = 5;\n  static RECARGO_POR_KG = 300;\n\n  static calcular(subtotal, pesoKg, ubicacion, pedido) {\n    if (subtotal >= this.UMBRAL_ENVIO_GRATIS) {\n      return { costo: 0, tarifaBase: 0, recargoPeso: 0, gratis: true };\n    }\n    const esCentral = ZonaCobertura.esCantonCentral(ubicacion, pedido);\n    const tarifaBase = esCentral ? this.TARIFA_CENTRAL : this.TARIFA_RESTO;\n    let recargoPeso = 0;\n    if (pesoKg > this.LIMITE_PESO_BASE_KG) {\n      recargoPeso = Math.ceil(pesoKg - this.LIMITE_PESO_BASE_KG) * this.RECARGO_POR_KG;\n    }\n    return {\n      costo: tarifaBase + recargoPeso,\n      tarifaBase,\n      recargoPeso,\n      gratis: false\n    };\n  }\n}\n\nclass Pedido {\n  constructor(datos = {}) {\n    this.id = datos.id;\n    this.cliente = datos.cliente || 'Anónimo';\n    this.email = datos.email || datos.correo || '';\n    this.ip = datos.ip || '';\n    this.estado = datos.estado || 'pendiente';\n    this.provincia = datos.provincia || '';\n    this.canton = datos.canton || '';\n    this.items = Array.isArray(datos.items) ? datos.items : [];\n    this.pesoKg = Number(datos.pesoKg) || 1;\n  }\n\n  validarEstructura() {\n    if (!this.items || this.items.length === 0) {\n      return { valido: false, codigo: 'DATOS_INCOMPLETOS', motivo: 'Datos incompletos: el pedido no tiene productos.' };\n    }\n    if (!this.ip || typeof this.ip !== 'string') {\n      return { valido: false, codigo: 'IP_INVALIDA', motivo: 'La IP del cliente falta o no tiene un formato válido.' };\n    }\n    return { valido: true };\n  }\n\n  calcularSubtotal() {\n    return this.items.reduce((acc, it) => acc + (Number(it.precio) || 0) * (Number(it.cantidad) || 1), 0);\n  }\n}\n\n// Mapeo seguro uno a uno por índice i evitando mezclas de pedidos\nconst geoItems = $input.all();\nconst pedidosItems = $('HTTP_Get_Pendientes').all();\nconst resultados = [];\n\nfor (let i = 0; i < geoItems.length; i++) {\n  const pedidoData = pedidosItems[i].json;\n  const geoData = geoItems[i].json;\n\n  const pedido = new Pedido(pedidoData);\n  const ubicacion = new Ubicacion(geoData);\n\n  const validacion = pedido.validarEstructura();\n  if (!validacion.valido) {\n    const subtotal = pedido.calcularSubtotal();\n    resultados.push({\n      json: {\n        ok: false,\n        pedidoId: pedido.id,\n        cliente: pedido.cliente,\n        email: pedido.email,\n        subtotal: subtotal,\n        costoEnvio: 0,\n        total: subtotal,\n        motivo: validacion.motivo,\n        codigoRechazo: validacion.codigo,\n        patch: {\n          estado: 'rechazado',\n          motivoRechazo: validacion.motivo,\n          codigoRechazo: validacion.codigo,\n          subtotal: subtotal,\n          costoEnvio: 0,\n          total: subtotal,\n          procesadoEn: new Date().toISOString()\n        }\n      }\n    });\n    continue;\n  }\n\n  const tieneCobertura = ZonaCobertura.cubre(ubicacion, pedido);\n  const subtotal = pedido.calcularSubtotal();\n\n  if (!tieneCobertura) {\n    const ubicacionTexto = ubicacion.esExitosa() ? ubicacion.descripcion() : (pedido.provincia || 'Ubicación no verificable');\n    const motivo = `Solo realizamos envíos a la provincia de San José, Costa Rica. Ubicación detectada o registrada: ${ubicacionTexto}.`;\n    resultados.push({\n      json: {\n        ok: false,\n        pedidoId: pedido.id,\n        cliente: pedido.cliente,\n        email: pedido.email,\n        subtotal: subtotal,\n        costoEnvio: 0,\n        total: subtotal,\n        motivo: motivo,\n        codigoRechazo: 'FUERA_DE_COBERTURA',\n        patch: {\n          estado: 'rechazado',\n          motivoRechazo: motivo,\n          codigoRechazo: 'FUERA_DE_COBERTURA',\n          subtotal: subtotal,\n          costoEnvio: 0,\n          total: subtotal,\n          ubicacionDetectada: ubicacion.esExitosa() ? ubicacion.resumen() : null,\n          procesadoEn: new Date().toISOString()\n        }\n      }\n    });\n  } else {\n    const envio = CalculadorEnvio.calcular(subtotal, pedido.pesoKg, ubicacion, pedido);\n    const total = subtotal + envio.costo;\n    resultados.push({\n      json: {\n        ok: true,\n        pedidoId: pedido.id,\n        cliente: pedido.cliente,\n        email: pedido.email,\n        subtotal: subtotal,\n        costoEnvio: envio.costo,\n        total: total,\n        motivo: null,\n        patch: {\n          estado: 'aprobado',\n          motivoRechazo: null,\n          codigoRechazo: null,\n          subtotal: subtotal,\n          costoEnvio: envio.costo,\n          total: total,\n          ubicacionDetectada: ubicacion.resumen(),\n          procesadoEn: new Date().toISOString()\n        }\n      }\n    });\n  }\n}\n\nreturn resultados;\n"
+      },
+      "id": "node-code-logica-poo",
+      "name": "Code_Logica_POO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-if-es-aprobado",
+      "name": "IF_Es_Aprobado",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1360,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://127.0.0.1:3000/pedidos/{{ $json.pedidoId }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.patch }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "node-patch-pedido-aprobado",
+      "name": "PATCH_Pedido_Aprobado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1640,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "notificaciones@tienda.com",
+        "toEmail": "={{ $('IF_Es_Aprobado').item.json.email }}",
+        "subject": "=Confirmación Pedido #{{ $('IF_Es_Aprobado').item.json.pedidoId }} - APROBADO",
+        "text": "=Estimado/a {{ $('IF_Es_Aprobado').item.json.cliente }},\n\nNos complace informarle que su pedido #{{ $('IF_Es_Aprobado').item.json.pedidoId }} ha sido APROBADO dentro de nuestra zona de cobertura en San José, Costa Rica.\n\nDetalles de facturación:\n- Subtotal: ₡{{ $('IF_Es_Aprobado').item.json.subtotal }}\n- Costo de Envío: ₡{{ $('IF_Es_Aprobado').item.json.costoEnvio }}\n- Total a Pagar: ₡{{ $('IF_Es_Aprobado').item.json.total }}\n\n¡Gracias por su compra!",
+        "options": {}
+      },
+      "id": "node-email-confirmacion-aprobado",
+      "name": "Email_Confirmacion_Aprobado",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1920,
+        200
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "smtp": {
+          "id": "GTcII41cEvgdDFxO",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://127.0.0.1:3000/pedidos/{{ $json.pedidoId }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.patch }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "node-patch-pedido-rechazado",
+      "name": "PATCH_Pedido_Rechazado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1640,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "notificaciones@tienda.com",
+        "toEmail": "={{ $('IF_Es_Aprobado').item.json.email }}",
+        "subject": "=Actualización Pedido #{{ $('IF_Es_Aprobado').item.json.pedidoId }} - RECHAZADO",
+        "text": "=Estimado/a {{ $('IF_Es_Aprobado').item.json.cliente }},\n\nLe notificamos que su pedido #{{ $('IF_Es_Aprobado').item.json.pedidoId }} no ha podido ser aprobado.\n\nMotivo del rechazo:\n{{ $('IF_Es_Aprobado').item.json.motivo }}\n\nNuestra cobertura actual de despacho aplica exclusivamente para la provincia de San José, Costa Rica.\n\nAtentamente,\nServicio al Cliente",
+        "options": {}
+      },
+      "id": "node-email-notificacion-rechazo",
+      "name": "Email_Notificacion_Rechazo",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1920,
+        420
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "smtp": {
+          "id": "GTcII41cEvgdDFxO",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule_Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP_Get_Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_Get_Pendientes": {
+      "main": [
+        [
+          {
+            "node": "HTTP_Geo_IP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_Geo_IP": {
+      "main": [
+        [
+          {
+            "node": "Code_Logica_POO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code_Logica_POO": {
+      "main": [
+        [
+          {
+            "node": "IF_Es_Aprobado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_Es_Aprobado": {
+      "main": [
+        [
+          {
+            "node": "PATCH_Pedido_Aprobado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PATCH_Pedido_Rechazado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PATCH_Pedido_Aprobado": {
+      "main": [
+        [
+          {
+            "node": "Email_Confirmacion_Aprobado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PATCH_Pedido_Rechazado": {
+      "main": [
+        [
+          {
+            "node": "Email_Notificacion_Rechazo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "WfCobPedSj001"
+}

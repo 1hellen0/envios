@@ -1,70 +1,82 @@
-{
-  "pedidos": [
-    {
-      "id": 1,
-      "cliente": "María Rodríguez",
-      "ip": "170.203.199.242",
-      "estado": "pendiente",
-      "items": [
-        {
-          "nombre": "Teclado Mecánico",
-          "precio": 30000,
-          "cantidad": 1
-        }
-      ],
-      "pesoKg": 1,
-      "subtotal": 30000,
-      "costoEnvio": null,
-      "total": null,
-      "motivoRechazo": null,
-      "codigoRechazo": null,
-      "ubicacionDetectada": null,
-      "ultimoError": null,
-      "procesadoEn": null
-    },
-    {
-      "id": 2,
-      "cliente": "Carlos Mora (Escazú)",
-      "ip": "181.194.50.12",
-      "estado": "pendiente",
-      "items": [
-        {
-          "nombre": "Monitor LED",
-          "precio": 30000,
-          "cantidad": 1
-        }
-      ],
-      "pesoKg": 4,
-      "subtotal": 30000,
-      "costoEnvio": null,
-      "total": null,
-      "motivoRechazo": null,
-      "codigoRechazo": null,
-      "ubicacionDetectada": null,
-      "ultimoError": null,
-      "procesadoEn": null
-    },
-    {
-      "id": 3,
-      "cliente": "Laura Solano (Heredia)",
-      "ip": "190.113.115.5",
-      "estado": "pendiente",
-      "items": [
-        {
-          "nombre": "Mouse Inalámbrico",
-          "precio": 15000,
-          "cantidad": 1
-        }
-      ],
-      "pesoKg": 1,
-      "subtotal": 15000,
-      "costoEnvio": null,
-      "total": null,
-      "motivoRechazo": null,
-      "codigoRechazo": null,
-      "ubicacionDetectada": null,
-      "ultimoError": null,
-      "procesadoEn": null
-    }
-  ]
+﻿{
+    "pedidos":  [
+                    {
+                        "id":  1,
+                        "cliente":  "MarÃ­a RodrÃ­guez",
+                        "correo":  "maria.rodriguez@example.com",
+                        "email":  "maria.rodriguez@example.com",
+                        "ip":  "170.203.199.242",
+                        "provincia":  "San JosÃ©",
+                        "canton":  "San JosÃ©",
+                        "estado":  "pendiente",
+                        "items":  [
+                                      {
+                                          "nombre":  "Teclado MecÃ¡nico",
+                                          "precio":  30000,
+                                          "cantidad":  1
+                                      }
+                                  ],
+                        "pesoKg":  1,
+                        "subtotal":  30000,
+                        "costoEnvio":  null,
+                        "total":  null,
+                        "motivoRechazo":  null,
+                        "codigoRechazo":  null,
+                        "ubicacionDetectada":  null,
+                        "ultimoError":  null,
+                        "procesadoEn":  null
+                    },
+                    {
+                        "id":  2,
+                        "cliente":  "Carlos Mora (EscazÃº)",
+                        "correo":  "carlos.mora@example.com",
+                        "email":  "carlos.mora@example.com",
+                        "ip":  "170.203.199.242",
+                        "provincia":  "San JosÃ©",
+                        "canton":  "EscazÃº",
+                        "estado":  "pendiente",
+                        "items":  [
+                                      {
+                                          "nombre":  "Monitor LED",
+                                          "precio":  30000,
+                                          "cantidad":  1
+                                      }
+                                  ],
+                        "pesoKg":  4,
+                        "subtotal":  30000,
+                        "costoEnvio":  null,
+                        "total":  null,
+                        "motivoRechazo":  null,
+                        "codigoRechazo":  null,
+                        "ubicacionDetectada":  null,
+                        "ultimoError":  null,
+                        "procesadoEn":  null
+                    },
+                    {
+                        "id":  3,
+                        "cliente":  "Laura Solano (Heredia)",
+                        "correo":  "laura.solano@example.com",
+                        "email":  "laura.solano@example.com",
+                        "ip":  "8.8.8.8",
+                        "provincia":  "Heredia",
+                        "canton":  "Heredia",
+                        "estado":  "pendiente",
+                        "items":  [
+                                      {
+                                          "nombre":  "Mouse InalÃ¡mbrico",
+                                          "precio":  15000,
+                                          "cantidad":  1
+                                      }
+                                  ],
+                        "pesoKg":  1,
+                        "subtotal":  15000,
+                        "costoEnvio":  null,
+                        "total":  null,
+                        "motivoRechazo":  null,
+                        "codigoRechazo":  null,
+                        "ubicacionDetectada":  null,
+                        "ultimoError":  null,
+                        "procesadoEn":  null
+                    }
+                ]
 }
